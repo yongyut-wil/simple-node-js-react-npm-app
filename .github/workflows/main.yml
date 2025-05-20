@@ -1,4 +1,4 @@
-name: React App CI/CD
+name: React App CI with Jenkins CD
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [16.x, 18.x]
+        node-version: [16.x]  # ลดลงเป็นเวอร์ชันเดียวเพื่อให้สอดคล้องกับ Jenkins (node:16-buster-slim)
 
     steps:
     - name: Checkout code
@@ -37,8 +37,18 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: build-files-node-${{ matrix.node-version }}
+        name: build-files
         path: build/
+    
+    # เพิ่มขั้นตอนทริกเกอร์ Jenkins เมื่อ push ไปยัง master branch
+    - name: Trigger Jenkins job
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      run: |
+        curl -X POST \
+             -H "Content-Type: application/json" \
+             --user ${{ secrets.JENKINS_USER }}:${{ secrets.JENKINS_TOKEN }} \
+             "${{ secrets.JENKINS_URL }}/job/simple-node-js-react-npm-app/build"
+      continue-on-error: true
 
   # อีกชุดงานสำหรับ deployment (เปิดการใช้งานเมื่อต้องการ)
   # deploy:
