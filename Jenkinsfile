@@ -1,34 +1,42 @@
  pipeline {
-        agent {
-            docker {
-                image 'node:16-buster-slim'
-                args '-p 3000:3000'
+    agent {
+        docker {
+            image 'node:16-buster-slim'
+            args '-p 3000:3000'
+        }
+    }
+    triggers {
+        githubPush()
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'npm install'
             }
         }
-        stages {
-            stage('Build') {
-                steps {
-                    sh 'npm install'
-                }
+        stage('Test') {
+            steps {
+                sh 'chmod +rx ./jenkins/scripts/*.sh'
+                sh './jenkins/scripts/test.sh'
             }
-            stage('Test') {
-                steps {
-                    sh 'chmod +rx ./jenkins/scripts/*.sh'
-                    sh './jenkins/scripts/test.sh'
-                }
+        }
+        stage('Auto Approval') {
+            when {
+                branch 'master'
             }
-            stage('Manual Approval') { 
-                steps {
-                    sh './jenkins/scripts/deliver.sh' 
-                    input message: 'Lanjutkan ke tahap Deploy? (Klik "Proceed" untuk melanjutkan)'  
-                }
+            steps {
+                sh './jenkins/scripts/deliver.sh'
+                echo 'Auto approval for master branch'
             }
-            stage('Deploy') { 
-                steps {
-                    sh './jenkins/scripts/deliver.sh' 
-                    input message: 'Sudah selesai menggunakan React App? (Klik "Proceed" untuk mengakhiri)'
-                    sh './jenkins/scripts/kill.sh' 
-                }
+        }
+        stage('Deploy') {
+            when {
+                branch 'master'
+            }
+            steps {
+                sh './jenkins/scripts/deliver.sh'
+                sh './jenkins/scripts/kill.sh'
             }
         }
     }
+}
