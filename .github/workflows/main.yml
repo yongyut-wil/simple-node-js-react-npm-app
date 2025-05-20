@@ -1,4 +1,4 @@
-name: React App CI/CD
+name: React App CI with Jenkins CD
 
 on:
   push:
@@ -36,40 +36,50 @@ jobs:
         name: build-files
         path: build/
         
-  # deploy เมื่อ push ไปยัง main หรือ master เท่านั้น
-  deploy:
+  # ทริกเกอร์ Jenkins สำหรับ CD เมื่อ push ไปยัง main หรือ master เท่านั้น
+  trigger-jenkins:
     needs: build-and-test
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      
+    # ส่งไฟล์ build ไปยัง Jenkins
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
         name: build-files
         path: build
     
-    # Deploy ไปยัง GitHub Pages
-    - name: Deploy to GitHub Pages
-      uses: JamesIves/github-pages-deploy-action@v4
+    # เก็บ build ไว้เป็น cache สำหรับใช้ใน Jenkins
+    - name: Cache build
+      uses: actions/cache@v3
       with:
-        folder: build
-        branch: gh-pages
-        token: ${{ secrets.GITHUB_TOKEN }}
+        path: build
+        key: build-${{ github.sha }}
+        restore-keys: |
+          build-
+    
+    # ทริกเกอร์ Jenkins job
+    - name: Trigger Jenkins
+      run: |
+        echo "CI workflow เสร็จสิ้นแล้ว - ทริกเกอร์ Jenkins"
         
-    # สำหรับ Netlify (ทางเลือกอื่น)
-    # - name: Deploy to Netlify
-    #   uses: nwtgck/actions-netlify@v2
-    #   with:
-    #     publish-dir: './build'
-    #     production-branch: master
-    #     deploy-message: "Deploy from GitHub Actions"
-    #     enable-pull-request-comment: false
-    #     enable-commit-comment: true
-    #   env:
-    #     NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-    #     NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-    #   timeout-minutes: 1
+        # โค้ดสำหรับการทริกเกอร์ Jenkins
+        # หากคุณตั้งค่า Jenkins เรียบร้อยแล้ว ให้ถอดสัญลักษณ์ # ออกจากโค้ดด้านล่าง
+        
+        # แบบที่ 1: API trigger
+        curl -X POST \
+             -H "Content-Type: application/json" \
+             --user "ytyt:ytyt1234" \
+             "http://localhost:8080/job/simple-node-js-react-npm-app/build"
+        
+        # แบบที่ 2: webhook
+        # curl -X POST "<JENKINS_WEBHOOK_URL>"
+    
+    # โนต: การทำงานร่วมกับ Jenkins
+    - name: Jenkins integration note
+      run: |
+        echo "วิธีการตั้งค่าการทำงานร่วมกับ Jenkins:"
+        echo "1. ตั้งค่า JENKINS_URL, JENKINS_USER, JENKINS_TOKEN ใน GitHub -> Settings -> Secrets -> Actions"
+        echo "2. หรือตั้งค่า webhook ใน Jenkins และใช้ JENKINS_WEBHOOK_URL"
+        echo "3. แก้ไขโค้ด GitHub Actions workflow ระบุคำสั่งทริกเกอร์ Jenkins ที่ถูกต้อง"
