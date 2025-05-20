@@ -37,7 +37,7 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: build-files
+        name: build-files-node-${{ matrix.node-version }}
         path: build/
 
   # อีกชุดงานสำหรับ deployment (เปิดการใช้งานเมื่อต้องการ)
